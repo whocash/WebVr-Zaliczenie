@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Układ Słoneczny VR - Google Cardboard</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+</head>
+<body>
+
+    <a-scene>
+        <a-sky color="#030308"></a-sky>
+
+        <a-sphere id="sun" position="0 0 0" radius="3" color="#FFCC00" 
+                  material="emissive: #FF9900; emissiveIntensity: 0.8">
+        </a-sphere>
+
+        <a-plane position="0 5 5" width="6" height="2.5" color="#000000" material="opacity: 0.7; transparent: true">
+            <a-text 
+                id="planet-info-text" 
+                value="Skieruj wzrok na planete, aby pobrac dane z bazy..." 
+                align="center" 
+                color="#00FF00" 
+                width="5"
+                position="0 0 0.1">
+            </a-text>
+        </a-plane>
+
+        <a-entity id="galaxy-container"></a-entity>
+
+        <a-entity camera look-controls position="0 3 15">
+            <a-cursor 
+                id="cursor" 
+                color="#00FF00" 
+                position="0 0 -1"
+                scale="1 1 1"
+                animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
+                animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1">
+            </a-cursor>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        // TUTAJ WPISZ SWOJE IP
+        const BACKEND_URL = 'http://192.168.0.5:3000';
+        const galaxy = document.getElementById('galaxy-container');
+        const infoText = document.getElementById('planet-info-text');
+
+        async function initSystem() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/planets`);
+                const planety = await response.json();
+
+                galaxy.innerHTML = '';
+
+                planety.forEach((planeta) => {
+                    // 1. WIZUALIZACJA ORBITY
+                    // Używamy a-ring, ale dodajemy mu delikatną wysokość i zmieniamy pozycję y=-0.1,
+                    // aby płaszczyzna orbity była widoczna jako płaski, ciemny dysk pod planetami.
+                    const orbitRing = document.createElement('a-ring');
+                    orbitRing.setAttribute('radius-inner', planeta.promienOrbity - 0.15);
+                    orbitRing.setAttribute('radius-outer', planeta.promienOrbity + 0.15);
+                    // Kolor ciemnoszary/niebieskawy, lekko przezroczysty, żeby nie raził
+                    orbitRing.setAttribute('color', '#111122');
+                    orbitRing.setAttribute('material', 'opacity: 0.8; transparent: true; side: double');
+                    orbitRing.setAttribute('rotation', '-90 0 0'); // Kładziemy na płasko
+                    orbitRing.setAttribute('position', '0 -0.5 0'); // Minimalnie pod osią planet
+                    galaxy.appendChild(orbitRing);
+
+                    // 2. ROTACJA WOKÓŁ SŁOŃCA (Pivot)
+                    const pivot = document.createElement('a-entity');
+                    pivot.setAttribute('position', '0 0 0');
+                    pivot.setAttribute('animation', `property: rotation; to: 0 360 0; loop: true; dur: ${planeta.predkosc}; easing: linear`);
+
+                    // 3. PLANETA (jako zwykła kula)
+                    const sphere = document.createElement('a-sphere');
+                    sphere.setAttribute('id', planeta.id);
+                    sphere.setAttribute('position', `0 0 -${planeta.promienOrbity}`);
+                    sphere.setAttribute('radius', planeta.rozmiar);
+                    sphere.setAttribute('color', planeta.kolor);
+
+                    // REAKCJA NA SPOJRZENIE (Gaze Click)
+                    sphere.addEventListener('click', async () => {
+                        infoText.setAttribute('value', 'Pobieranie danych...');
+                        try {
+                            const res = await fetch(`${BACKEND_URL}/api/planets/${planeta.id}/interact`, {
+                                method: 'POST'
+                            });
+                            const data = await res.json();
+                            
+                            // Aktualizujemy naszą dużą tablicę w kosmosie
+                            const oczyszczonyTekst = `${data.nazwa.toUpperCase()}:\n${usunPolskieZnaki(data.opis)}`;
+                            infoText.setAttribute('value', oczyszczonyTekst);
+                        } catch (err) {
+                            infoText.setAttribute('value', 'Blad polaczenia z serwerem!');
+                            console.error("Błąd interakcji:", err);
+                        }
+                    });
+
+                    pivot.appendChild(sphere);
+                    galaxy.appendChild(pivot);
+                });
+
+            } catch (err) {
+                infoText.setAttribute('value', 'Blad ladowania planet!');
+                console.error("Nie udało się załadować planet z backendu:", err);
+            }
+        }
+
+        // Funkcja usuwająca polskie ogonki, bo podstawowy silnik czcionek A-Frame ich nie renderuje
+        function usunPolskieZnaki(text) {
+            return text
+                .replace(/ą/g, 'a').replace(/Ć/g, 'C').replace(/ć/g, 'c')
+                .replace(/ę/g, 'e').replace(/ł/g, 'l').replace(/ń/g, 'n')
+                .replace(/ó/g, 'o').replace(/ś/g, 's').replace(/ź/g, 'z')
+                .replace(/ż/g, 'z')
+                .replace(/Ą/g, 'A').replace(/Ę/g, 'E').replace(/Ł/g, 'L')
+                .replace(/Ń/g, 'N').replace(/Ó/g, 'O').replace(/Ś/g, 'S')
+                .replace(/Ź/g, 'Z').replace(/Ż/g, 'Z');
+        }
+
+        initSystem();
+    </script>
+</body>
+</html>
+const BACKEND_URL = 'http://192.168.0.5:3000';
