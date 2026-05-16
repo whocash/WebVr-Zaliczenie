@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Serwis bazy danych PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: vr_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: super_tajne_haslo123
+      POSTGRES_DB: kosmos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Serwis naszego backendu w Node.js
+  backend:
+    build: ./backend
+    container_name: vr_node_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db # Mówimy backendowi, że baza to serwis "db"
+    depends_on:
+      - db # Backend poczeka z odpaleniem, aż baza będzie gotowa
+
+volumes:
+  postgres_data:
