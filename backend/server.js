@@ -105,6 +105,10 @@ app.get('/health', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Serwer backendowy rozmawia z PostgreSQL na porcie ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`Serwer backendowy rozmawia z PostgreSQL na porcie ${PORT}`);
+    });
+}
+
+module.exports = { app, pool }
