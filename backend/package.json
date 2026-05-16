@@ -13,6 +13,6 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "jest --runInBand --detectOpenHandles"
+    "test": "jest --runInBand --detectOpenHandles --json --outputFile=test-result.json"
   }
 }

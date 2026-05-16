@@ -104,6 +104,63 @@ app.get('/health', async (req, res) => {
         res.status(500).json({ status: "DOWN", database: "DISCONNECTED" });
     }
 });
+const Docker = require('dockerode');
+const fs = require('fs');
+const path = require('path');
+
+// Łączymy się z Docker Socket (zadziała wewnątrz kontenera dzięki konfiguracji z docker-compose)
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+app.get('/api/dashboard-status', async (req, res) => {
+    let dbStatus = "UNKNOWN";
+    let backendStatus = "UNKNOWN";
+    let testStatus = { status: "BRAK DANYCH", time: "-" };
+
+    // 1. Pobieranie statusów z Dockera
+    try {
+        const containers = await docker.listContainers({ all: true });
+        
+        const pgContainer = containers.find(c => c.Names.includes('/vr_postgres_db'));
+        const nodeContainer = containers.find(c => c.Names.includes('/vr_node_backend'));
+
+        if (pgContainer) dbStatus = pgContainer.Status; // Zwróci np. "Up 2 minutes (healthy)"
+        if (nodeContainer) backendStatus = nodeContainer.Status;
+    } catch (err) {
+        console.error("Błąd Dockera:", err.message);
+        // Jeśli testujesz lokalnie poza Dockerem, ustawiamy stan na "Działa lokalnie"
+        backendStatus = "Up (Running lokalnie)";
+        dbStatus = "Up (Uruchomiony)";
+    }
+
+    // 2. Pobieranie wyników ostatnich testów z pliku JSON
+    const testFilePath = path.join(__dirname, 'test-result.json');
+    if (fs.existsSync(testFilePath)) {
+        try {
+            const rawData = fs.readFileSync(testFilePath);
+            const testData = JSON.parse(rawData);
+            
+            testStatus.status = testData.numFailedTests > 0 ? "FAILED" : "SUCCESS";
+            testStatus.passed = testData.numPassedTests;
+            testStatus.total = testData.numTotalTests;
+            
+            // Pobieramy czas modyfikacji pliku jako czas wykonania testu
+            const stats = fs.statSync(testFilePath);
+            testStatus.time = stats.mtime.toLocaleTimeString('pl-PL');
+        } catch (e) {
+            console.error("Błąd czytania pliku testów:", e);
+        }
+    }
+
+    // 3. Wysyłamy gotowy raport na frontend
+    res.json({
+        appGlowna: "DZIAŁA (API OK)",
+        kontenery: {
+            bazaDanych: dbStatus,
+            backend: backendStatus
+        },
+        ostatnieTesty: testStatus
+    });
+});
 
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {

@@ -21,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Serwis naszego backendu w Node.js
+# Serwis naszego backendu w Node.js
   backend:
     build: ./backend
     container_name: vr_node_backend
@@ -30,15 +30,16 @@ services:
       - "3000:3000"
     environment:
       - DB_HOST=db
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # <-- TA LINIA DAJE DOSTĘP DO STATUSU DOCKERA
     depends_on:
       db:
-        condition: service_healthy # Backend wystartuje dopiero, gdy baza przejdzie healthcheck!
-    # MONITORING BACKENDU: Docker co 15 sekund wysyła zapytanie na nasz endpoint /health
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 15s
       timeout: 5s
       retries: 3
-
+      
 volumes:
   postgres_data:

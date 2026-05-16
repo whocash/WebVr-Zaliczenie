@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>WebVR - System Dashboard</title>
+    <style>
+        body {
+            background-color: #0f111a;
+            color: #e6edf3;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px;
+        }
+        h1 { color: #58a6ff; border-bottom: 2px solid #21262d; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .card h2 { margin-top: 0; font-size: 1.2rem; color: #8b949e; }
+        .status { font-size: 1.5rem; font-weight: bold; margin-top: 15px; display: flex; align-items: center; }
+        .indicator { width: 15px; height: 15px; border-radius: 50%; margin-right: 12px; display: inline-block; }
+        
+        /* Kolorki statusów */
+        .healthy { background-color: #2ea44f; box-shadow: 0 0 10px #2ea44f; color: #2ea44f; }
+        .unhealthy { background-color: #da3633; box-shadow: 0 0 10px #da3633; color: #da3633; }
+        .unknown { background-color: #8b949e; box-shadow: 0 0 10px #8b949e; color: #8b949e; }
+        
+        .details { font-size: 0.9rem; color: #8b949e; margin-top: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 Kosmiczny Panel Monitoringu Systemu</h1>
+    <p>Status odświeża się automatycznie co 3 sekundy.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Aplikacja Główna (API)</h2>
+            <div class="status">
+                <span id="app-indicator" class="indicator unknown"></span>
+                <span id="app-text">Ładowanie...</span>
+            </div>
+            <div class="details">Endpoint: http://localhost:3000/api/planets</div>
+        </div>
+
+        <div class="card">
+            <h2>Stan Kontenerów (Docker)</h2>
+            <div style="margin-top: 15px;">
+                <strong>Backend Node:</strong> 
+                <span id="cont-backend" style="font-family: monospace; color: #58a6ff;">-</span>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Baza Postgres:</strong> 
+                <span id="cont-db" style="font-family: monospace; color: #58a6ff;">-</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Ostatnie Testy Integracyjne</h2>
+            <div class="status">
+                <span id="tests-indicator" class="indicator unknown"></span>
+                <span id="tests-text">Brak danych</span>
+            </div>
+            <div id="tests-details" class="details">Uruchom 'npm test' w backendzie</div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                const response = await fetch('http://localhost:3000/api/dashboard-status');
+                const data = await response.json();
+
+                // 1. Aktualizacja Aplikacji Głównej
+                document.getElementById('app-indicator').className = "indicator healthy";
+                document.getElementById('app-text').innerText = data.appGlowna;
+
+                // 2. Aktualizacja Kontenerów
+                document.getElementById('cont-backend').innerText = data.kontenery.backend;
+                document.getElementById('cont-db').innerText = data.kontenery.bazaDanych;
+
+                // 3. Aktualizacja Testów
+                const tInd = document.getElementById('tests-indicator');
+                const tTxt = document.getElementById('tests-text');
+                const tDet = document.getElementById('tests-details');
+
+                if (data.ostatnieTesty.status === "SUCCESS") {
+                    tInd.className = "indicator healthy";
+                    tTxt.innerText = "ZALICZONE (SUCCESS)";
+                    tTxt.style.color = "#2ea44f";
+                } else if (data.ostatnieTesty.status === "FAILED") {
+                    tInd.className = "indicator unhealthy";
+                    tTxt.innerText = "BŁĄD (FAILED)";
+                    tTxt.style.color = "#da3633";
+                }
+
+                tDet.innerText = `Przeszło: ${data.ostatnieTesty.passed || 0}/${data.ostatnieTesty.total || 0} (Ostatni test: ${data.ostatnieTesty.time})`;
+
+            } catch (error) {
+                // Jeśli serwer padnie
+                document.getElementById('app-indicator').className = "indicator unhealthy";
+                document.getElementById('app-text').innerText = "Aplikacja nie odpowiada";
+                document.getElementById('cont-backend').innerText = "DOWN / DISCONNECTED";
+                document.getElementById('cont-db').innerText = "DOWN / DISCONNECTED";
+                document.getElementById('tests-indicator').className = "indicator unknown";
+                document.getElementById('tests-text').innerText = "Nie można sprawdzić";
+            }
+        }
+
+        // Odpytuj serwer co 3 sekundy
+        setInterval(fetchStatus, 3000);
+        fetchStatus(); // Pierwsze wywołanie od razu
+    </script>
+</body>
+</html>
