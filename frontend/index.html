@@ -4,26 +4,70 @@
     <meta charset="UTF-8">
     <title>Układ Słoneczny VR - Google Cardboard</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    
+    <style>
+        #ui-container {
+            position: absolute; top: 20px; left: 20px; z-index: 10;
+            background: rgba(10, 12, 22, 0.85); color: #e6edf3;
+            padding: 20px; border-radius: 8px; border: 1px solid #30363d;
+            font-family: sans-serif; max-width: 300px; pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h2 { margin-top: 0; color: #58a6ff; font-size: 1.2rem; }
+        .opis-item { margin-bottom: 5px; font-size: 0.9rem; color: #c9d1d9; }
+    </style>
+
+    <script>
+        AFRAME.registerComponent('generator-gwiazd', {
+            init: function () {
+                const iloscGwiazd = 6200; 
+                const scena = this.el;
+
+                for (let i = 0; i < iloscGwiazd; i++) {
+                    const gwiazda = document.createElement('a-sphere');
+                    
+                    const rozmiar = Math.random() * 0.10 + 0.01;
+                    
+                    const promienTla = Math.random() * 40 + 30; 
+                    
+                    const u = Math.random();
+                    const v = Math.random();
+                    const theta = u * 2.0 * Math.PI;
+                    const phi = Math.acos(2.0 * v - 1.0);
+                    
+                    const x = promienTla * Math.sin(phi) * Math.cos(theta);
+                    const y = promienTla * Math.sin(phi) * Math.sin(theta);
+                    const z = promienTla * Math.cos(phi);
+
+                    const jasnosc = Math.floor(Math.random() * 55) + 200; 
+                    const kolor = `rgb(${jasnosc}, ${jasnosc}, 255)`;
+
+                    gwiazda.setAttribute('radius', rozmiar);
+                    gwiazda.setAttribute('position', `${x} ${y} ${z}`);
+                    gwiazda.setAttribute('color', kolor);
+                    gwiazda.setAttribute('shader', 'flat');
+
+                    scena.appendChild(gwiazda);
+                }
+            }
+        });
+    </script>
 </head>
 <body>
 
-    <a-scene>
+    <div id="ui-container">
+        <h2 id="ui-nazwa">Układ Słoneczny VR</h2>
+        <div id="ui-opisy">
+            <div class="opis-item">Skieruj celownik na planetę, aby pobrać informacje z bazy danych PostgreSQL przez API.</div>
+        </div>
+    </div>
+
+    <a-scene generator-gwiazd>
         <a-sky color="#030308"></a-sky>
 
         <a-sphere id="sun" position="0 0 0" radius="3" color="#FFCC00" 
                   material="emissive: #FF9900; emissiveIntensity: 0.8">
         </a-sphere>
-
-        <a-plane position="0 5 5" width="6" height="2.5" color="#000000" material="opacity: 0.7; transparent: true">
-            <a-text 
-                id="planet-info-text" 
-                value="Skieruj wzrok na planete, aby pobrac dane z bazy..." 
-                align="center" 
-                color="#00FF00" 
-                width="5"
-                position="0 0 0.1">
-            </a-text>
-        </a-plane>
 
         <a-entity id="galaxy-container"></a-entity>
 
@@ -40,10 +84,8 @@
     </a-scene>
 
     <script>
-        // TUTAJ WPISZ SWOJE IP
-        const BACKEND_URL = 'http://192.168.0.5:3000';
+        const BACKEND_URL = 'http://127.0.0.1:3000';
         const galaxy = document.getElementById('galaxy-container');
-        const infoText = document.getElementById('planet-info-text');
 
         async function initSystem() {
             try {
@@ -53,60 +95,62 @@
                 galaxy.innerHTML = '';
 
                 planety.forEach((planeta) => {
-                    // 1. WIZUALIZACJA ORBITY
-                    // Używamy a-ring, ale dodajemy mu delikatną wysokość i zmieniamy pozycję y=-0.1,
-                    // aby płaszczyzna orbity była widoczna jako płaski, ciemny dysk pod planetami.
                     const orbitRing = document.createElement('a-ring');
-                    orbitRing.setAttribute('radius-inner', planeta.promienOrbity - 0.15);
-                    orbitRing.setAttribute('radius-outer', planeta.promienOrbity + 0.15);
-                    // Kolor ciemnoszary/niebieskawy, lekko przezroczysty, żeby nie raził
-                    orbitRing.setAttribute('color', '#111122');
-                    orbitRing.setAttribute('material', 'opacity: 0.8; transparent: true; side: double');
-                    orbitRing.setAttribute('rotation', '-90 0 0'); // Kładziemy na płasko
-                    orbitRing.setAttribute('position', '0 -0.5 0'); // Minimalnie pod osią planet
+                    orbitRing.setAttribute('radius-inner', planeta.promienOrbity - 0.04);
+                    orbitRing.setAttribute('radius-outer', planeta.promienOrbity + 0.04);
+                    orbitRing.setAttribute('color', '#555566'); 
+                    orbitRing.setAttribute('material', 'opacity: 0.4; transparent: true; side: double');
+                    orbitRing.setAttribute('rotation', '-90 0 0'); 
+                    orbitRing.setAttribute('position', '0 0 0'); 
+                    orbitRing.setAttribute('shader', 'flat');
                     galaxy.appendChild(orbitRing);
 
-                    // 2. ROTACJA WOKÓŁ SŁOŃCA (Pivot)
                     const pivot = document.createElement('a-entity');
                     pivot.setAttribute('position', '0 0 0');
                     pivot.setAttribute('animation', `property: rotation; to: 0 360 0; loop: true; dur: ${planeta.predkosc}; easing: linear`);
 
-                    // 3. PLANETA (jako zwykła kula)
+                    const planetContainer = document.createElement('a-entity');
+                    planetContainer.setAttribute('position', `0 0 -${planeta.promienOrbity}`);
+
                     const sphere = document.createElement('a-sphere');
                     sphere.setAttribute('id', planeta.id);
-                    sphere.setAttribute('position', `0 0 -${planeta.promienOrbity}`);
+                    sphere.setAttribute('position', '0 0 0'); 
                     sphere.setAttribute('radius', planeta.rozmiar);
                     sphere.setAttribute('color', planeta.kolor);
 
-                    // REAKCJA NA SPOJRZENIE (Gaze Click)
+                    sphere.addEventListener('mouseenter', () => {
+                        sphere.setAttribute('animation__scale', 'property: scale; to: 1.25 1.25 1.25; dur: 200; easing: easeOutQuad');
+                    });
+
+                    sphere.addEventListener('mouseleave', () => {
+                        sphere.setAttribute('animation__scale', 'property: scale; to: 1 1 1; dur: 200; easing: easeOutQuad');
+                    });
+
                     sphere.addEventListener('click', async () => {
-                        infoText.setAttribute('value', 'Pobieranie danych...');
                         try {
                             const res = await fetch(`${BACKEND_URL}/api/planets/${planeta.id}/interact`, {
                                 method: 'POST'
                             });
                             const data = await res.json();
                             
-                            // Aktualizujemy naszą dużą tablicę w kosmosie
-                            const oczyszczonyTekst = `${data.nazwa.toUpperCase()}:\n${usunPolskieZnaki(data.opis)}`;
-                            infoText.setAttribute('value', oczyszczonyTekst);
+                            document.getElementById('ui-nazwa').innerText = data.nazwa;
+                            document.getElementById('ui-opisy').innerHTML = `<div class="opis-item">✨ ${data.opis}</div>`;
+                            
                         } catch (err) {
-                            infoText.setAttribute('value', 'Blad polaczenia z serwerem!');
                             console.error("Błąd interakcji:", err);
                         }
                     });
 
-                    pivot.appendChild(sphere);
+                    planetContainer.appendChild(sphere);
+                    pivot.appendChild(planetContainer);
                     galaxy.appendChild(pivot);
                 });
 
             } catch (err) {
-                infoText.setAttribute('value', 'Blad ladowania planet!');
                 console.error("Nie udało się załadować planet z backendu:", err);
             }
         }
 
-        // Funkcja usuwająca polskie ogonki, bo podstawowy silnik czcionek A-Frame ich nie renderuje
         function usunPolskieZnaki(text) {
             return text
                 .replace(/ą/g, 'a').replace(/Ć/g, 'C').replace(/ć/g, 'c')
@@ -122,4 +166,4 @@
     </script>
 </body>
 </html>
-const BACKEND_URL = 'http://192.168.0.5:3000';
+const BACKEND_URL = 'http://127.0.0.1:3000';

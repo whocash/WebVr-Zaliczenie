@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg'); // Importujemy sterownik PostgreSQL
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = 3000;
@@ -8,19 +8,16 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Konfiguracja połączenia z bazą danych
 const pool = new Pool({
     user: 'student',
-    host: process.env.DB_HOST || 'localhost', // <-- TA LINIA POZWOLI DZIAŁAĆ I TU, I W DOCKERZE
+    host: process.env.DB_HOST || 'localhost',
     database: 'kosmos_db',
     password: 'super_tajne_haslo123',
     port: 5432,
 });
 
-// Funkcja inicjalizująca bazę danych (tworzy tabelę i dodaje planety na start)
 async function initDatabase() {
     try {
-        // 1. Tworzymy tabelę planet, jeśli jeszcze nie istnieje
         await pool.query(`
             CREATE TABLE IF NOT EXISTS planety (
                 id VARCHAR(50) PRIMARY KEY,
@@ -33,7 +30,6 @@ async function initDatabase() {
             );
         `);
 
-        // 2. Sprawdzamy, czy tabela jest pusta
         const res = await pool.query('SELECT COUNT(*) FROM planety');
         if (parseInt(res.rows[0].count) === 0) {
             console.log("Baza danych jest pusta. Dodaję planety startowe...");
@@ -59,10 +55,8 @@ async function initDatabase() {
     }
 }
 
-// Uruchamiamy inicjalizację bazy danych
 initDatabase();
 
-// Endpoint GET: Pobiera planety prosto z bazy PostgreSQL
 app.get('/api/planets', async (req, res) => {
     try {
         const wynik = await pool.query('SELECT id, nazwa, kolor, promien_orbity AS "promienOrbity", rozmiar, predkosc, opisy FROM planety');
@@ -72,7 +66,6 @@ app.get('/api/planets', async (req, res) => {
     }
 });
 
-// Endpoint POST: Losuje opis dla planety z bazy danych
 app.post('/api/planets/:id/interact', async (req, res) => {
     const { id } = req.params;
     try {
@@ -95,10 +88,9 @@ app.post('/api/planets/:id/interact', async (req, res) => {
     }
 });
 
-// Endpoint monitoringu dla profesora
 app.get('/health', async (req, res) => {
     try {
-        await pool.query('SELECT 1'); // Szybki test czy baza odpowiada
+        await pool.query('SELECT 1');
         res.json({ status: "UP", database: "CONNECTED", timestamp: new Date() });
     } catch (err) {
         res.status(500).json({ status: "DOWN", database: "DISCONNECTED" });
@@ -108,7 +100,6 @@ const Docker = require('dockerode');
 const fs = require('fs');
 const path = require('path');
 
-// Łączymy się z Docker Socket (zadziała wewnątrz kontenera dzięki konfiguracji z docker-compose)
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 app.get('/api/dashboard-status', async (req, res) => {
@@ -116,7 +107,6 @@ app.get('/api/dashboard-status', async (req, res) => {
     let backendStatus = "UNKNOWN";
     let testStatus = { status: "BRAK DANYCH", time: "-" };
 
-    // 1. Pobieranie statusów z Dockera
     try {
         const containers = await docker.listContainers({ all: true });
         
@@ -127,12 +117,10 @@ app.get('/api/dashboard-status', async (req, res) => {
         if (nodeContainer) backendStatus = nodeContainer.Status;
     } catch (err) {
         console.error("Błąd Dockera:", err.message);
-        // Jeśli testujesz lokalnie poza Dockerem, ustawiamy stan na "Działa lokalnie"
         backendStatus = "Up (Running lokalnie)";
         dbStatus = "Up (Uruchomiony)";
     }
 
-    // 2. Pobieranie wyników ostatnich testów z pliku JSON
     const testFilePath = path.join(__dirname, 'test-result.json');
     if (fs.existsSync(testFilePath)) {
         try {
@@ -143,7 +131,6 @@ app.get('/api/dashboard-status', async (req, res) => {
             testStatus.passed = testData.numPassedTests;
             testStatus.total = testData.numTotalTests;
             
-            // Pobieramy czas modyfikacji pliku jako czas wykonania testu
             const stats = fs.statSync(testFilePath);
             testStatus.time = stats.mtime.toLocaleTimeString('pl-PL');
         } catch (e) {
@@ -151,7 +138,6 @@ app.get('/api/dashboard-status', async (req, res) => {
         }
     }
 
-    // 3. Wysyłamy gotowy raport na frontend
     res.json({
         appGlowna: "DZIAŁA (API OK)",
         kontenery: {

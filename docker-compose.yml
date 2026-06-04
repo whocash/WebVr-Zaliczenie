@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Serwis bazy danych PostgreSQL
   db:
     image: postgres:15-alpine
     container_name: vr_postgres_db
@@ -14,14 +13,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # MONITORING BAZY: Docker sprawdza czy baza odpowiada na komendę pg_isready
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U student -d kosmos_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Serwis naszego backendu w Node.js
   backend:
     build: ./backend
     container_name: vr_node_backend
@@ -31,7 +28,7 @@ services:
     environment:
       - DB_HOST=db
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock # <-- TA LINIA DAJE DOSTĘP DO STATUSU DOCKERA
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       db:
         condition: service_healthy

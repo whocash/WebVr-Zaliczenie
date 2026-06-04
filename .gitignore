@@ -1,15 +1,11 @@
-# Foldery z zależnościami (zostaną zignorowane)
 node_modules/
 /backend/node_modules/
 
-# Pliki logów (błędy npm)
 *.log
 npm-debug.log*
 
-# Pliki konfiguracyjne systemu operacyjnego
 .DS_Store
 Thumbs.db
 
-# Pliki środowiskowe (jeśli będziesz trzymać tam hasła do bazy)
 .env
 .env.local

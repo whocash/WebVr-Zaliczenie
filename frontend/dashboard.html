@@ -17,7 +17,6 @@
         .status { font-size: 1.5rem; font-weight: bold; margin-top: 15px; display: flex; align-items: center; }
         .indicator { width: 15px; height: 15px; border-radius: 50%; margin-right: 12px; display: inline-block; }
         
-        /* Kolorki statusów */
         .healthy { background-color: #2ea44f; box-shadow: 0 0 10px #2ea44f; color: #2ea44f; }
         .unhealthy { background-color: #da3633; box-shadow: 0 0 10px #da3633; color: #da3633; }
         .unknown { background-color: #8b949e; box-shadow: 0 0 10px #8b949e; color: #8b949e; }
@@ -27,7 +26,7 @@
 </head>
 <body>
 
-    <h1>🚀 Kosmiczny Panel Monitoringu Systemu</h1>
+    <h1>Kosmiczny Panel Monitoringu Systemu</h1>
     <p>Status odświeża się automatycznie co 3 sekundy.</p>
 
     <div class="grid">
@@ -68,15 +67,12 @@
                 const response = await fetch('http://localhost:3000/api/dashboard-status');
                 const data = await response.json();
 
-                // 1. Aktualizacja Aplikacji Głównej
                 document.getElementById('app-indicator').className = "indicator healthy";
                 document.getElementById('app-text').innerText = data.appGlowna;
 
-                // 2. Aktualizacja Kontenerów
                 document.getElementById('cont-backend').innerText = data.kontenery.backend;
                 document.getElementById('cont-db').innerText = data.kontenery.bazaDanych;
 
-                // 3. Aktualizacja Testów
                 const tInd = document.getElementById('tests-indicator');
                 const tTxt = document.getElementById('tests-text');
                 const tDet = document.getElementById('tests-details');
@@ -94,7 +90,6 @@
                 tDet.innerText = `Przeszło: ${data.ostatnieTesty.passed || 0}/${data.ostatnieTesty.total || 0} (Ostatni test: ${data.ostatnieTesty.time})`;
 
             } catch (error) {
-                // Jeśli serwer padnie
                 document.getElementById('app-indicator').className = "indicator unhealthy";
                 document.getElementById('app-text').innerText = "Aplikacja nie odpowiada";
                 document.getElementById('cont-backend').innerText = "DOWN / DISCONNECTED";
@@ -104,9 +99,8 @@
             }
         }
 
-        // Odpytuj serwer co 3 sekundy
         setInterval(fetchStatus, 3000);
-        fetchStatus(); // Pierwsze wywołanie od razu
+        fetchStatus();
     </script>
 </body>
 </html>

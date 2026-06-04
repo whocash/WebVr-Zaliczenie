@@ -1,14 +1,12 @@
 const request = require('supertest');
 const { app, pool } = require('./server');
 
-// Zamykamy połączenie z bazą danych po zakończeniu wszystkich testów, żeby Jest mógł się wyłączyć
 afterAll(async () => {
     await pool.end();
 });
 
 describe('Testy Integracyjne API Układu Słonecznego', () => {
     
-    // TEST 1: Sprawdzenie endpointu monitoringu /health
     it('GET /health powinien zwrócić status 200 i potwierdzić połączenie z bazą', async () => {
         const res = await request(app).get('/health');
         
@@ -17,7 +15,6 @@ describe('Testy Integracyjne API Układu Słonecznego', () => {
         expect(res.body).toHaveProperty('database', 'CONNECTED');
     });
 
-    // TEST 2: Sprawdzenie pobierania planet
     it('GET /api/planets powinien zwrócić listę planet z bazy danych', async () => {
         const res = await request(app).get('/api/planets');
         
@@ -30,7 +27,6 @@ describe('Testy Integracyjne API Układu Słonecznego', () => {
         }
     });
 
-    // TEST 3: Sprawdzenie interakcji z konkretną planetą
     it('POST /api/planets/:id/interact powinien zwrócić losowy opis planety', async () => {
         const res = await request(app).post('/api/planets/ziemia/interact');
         
